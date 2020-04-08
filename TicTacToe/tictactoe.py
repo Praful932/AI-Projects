@@ -38,7 +38,7 @@ def actions(board):
     """
     Returns set of all possible actions (i, j) available on the board.
     """
-    all_actions = {}
+    all_actions = set()
     for i in range(3):
         for j in range(3):
             if board[i][j] == None:
@@ -50,15 +50,16 @@ def result(board, action):
     """
     Returns the board that results from making move (i, j) on the board.
     """
-    i,j = action
     board_copy = copy.deepcopy(board)
-    playerturn = player(board_copy)
-    if board_copy[i,j] != None:
-        raise Exception('Not valid move!')
-    elif playerturn == X:
-        board_copy[i,j] = X
-    else:
-        board_copy[i,j] = O
+    if action:
+        i,j = action
+        playerturn = player(board_copy)
+        if board_copy[i][j] != None:
+            raise Exception('Not valid move!')
+        elif playerturn == X:
+            board_copy[i][j] = X
+        else:
+            board_copy[i][j] = O
     return board_copy
     
 
@@ -67,7 +68,7 @@ def winner(board):
     Returns the winner of the game, if there is one.
     """
     Xs, Ys = count(board)
-    if Xs == 2 and Ys == 2:
+    if Xs <= 2 and Ys <= 2:
         return None
     else:
         if (board[0][0] == board[1][1] == board[2][2])  or (board[0][2] == board[1][1] == board[2][0]):
@@ -99,17 +100,46 @@ def utility(board):
     """
     Returns 1 if X has won the game, -1 if O has won, 0 otherwise.
     """
-    winner = winner(board)
-    if winner == X:
+    whowon = winner(board)
+    if whowon == X:
         return 1
-    elif winner == O:
+    elif whowon == O:
         return -1
     return 0
-    
 
+next_action = ()
+
+def max_value(board):
+    if terminal(board):
+        return utility(board)
+    v = float('-inf')
+    for action in actions(board):
+        current = min_value(result(board, action))
+        if current>v:
+            v = current
+            next_action = action
+    return v
+
+def min_value(board):
+    if terminal(board):
+        return utility(board)
+    v = float('inf')
+    for action in actions(board):
+        current =  max_value(result(board, action))
+        if current < v:
+            v = current
+            next_action = action
+    return v
 
 def minimax(board):
     """
     Returns the optimal action for the current player on the board.
     """
-    raise NotImplementedError
+    if terminal(board):
+        return None
+    chance = player(board)
+    if chance == X:
+        _ = max_value(board)
+    else:
+        _ = min_value(board)
+    return next_action
