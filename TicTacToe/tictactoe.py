@@ -27,9 +27,7 @@ def player(board):
     Returns player who has the next turn on a board.
     """
     Xs, Ys = count(board)
-    if board == initial_state():
-        return X
-    elif Xs==Ys:
+    if Xs==Ys:
         return X
     return O
 
@@ -41,7 +39,7 @@ def actions(board):
     all_actions = set()
     for i in range(3):
         for j in range(3):
-            if board[i][j] == None:
+            if board[i][j] == EMPTY:
                 all_actions.add((i,j))
     return all_actions
 
@@ -54,7 +52,7 @@ def result(board, action):
     if action:
         i,j = action
         playerturn = player(board_copy)
-        if board_copy[i][j] != None:
+        if board_copy[i][j] != EMPTY:
             raise Exception('Not valid move!')
         elif playerturn == X:
             board_copy[i][j] = X
@@ -82,6 +80,10 @@ def winner(board):
                 return board[2][1]
             elif (board[0][0] == board[0][1] == board[0][2]):
                 return board[0][1]
+            elif (board[1][0] == board[1][1] == board[1][2]):
+                return board[1][1]
+            elif (board[0][1] == board[1][1] == board[2][1]):
+                return board[1][1]
     return None
     
 
@@ -91,7 +93,8 @@ def terminal(board):
     Returns True if game is over, False otherwise.
     """
     status = winner(board)
-    if status:
+    Xs, Ys = count(board)
+    if status or ((Xs + Ys) == 9):
         return True
     return False
 
@@ -107,39 +110,63 @@ def utility(board):
         return -1
     return 0
 
-next_action = ()
-
-def max_value(board):
+def maximize(board, alpha, beta):
+    max_val = float('-inf')
+    max_action = ()
     if terminal(board):
         return utility(board)
-    v = float('-inf')
     for action in actions(board):
-        current = min_value(result(board, action))
-        if current>v:
-            v = current
-            next_action = action
-    return v
+        returnval = minimize(result(board, action), alpha, beta)
+        if isinstance(returnval, tuple):
+            val, _ = returnval
+        else:
+            val = returnval
+        if val > max_val:
+            max_action = action
+            max_val = val
+        alpha = max(alpha, max_val)
+        if beta<= alpha:
+            break
+    return max_val, max_action
 
-def min_value(board):
+def minimize(board, alpha, beta):
+    min_val = float('inf')
+    min_action = ()
     if terminal(board):
         return utility(board)
-    v = float('inf')
     for action in actions(board):
-        current =  max_value(result(board, action))
-        if current < v:
-            v = current
-            next_action = action
-    return v
+        returnval = maximize(result(board, action),alpha, beta)
+        if isinstance(returnval, tuple):
+            val, _ = returnval
+        else:
+            val = returnval
+        if val < min_val:
+            min_action = action
+            min_val = val
+        beta = min(beta, min_val)
+        if beta<=alpha:
+            break
+    return min_val, min_action
+
 
 def minimax(board):
     """
     Returns the optimal action for the current player on the board.
     """
+    # Alpha worst case for X
+    # Beta worst case for Y
+    # beta less than alpha means that earlier X(root of current node which has explored atleast 1 node) had a better option available so
+    # no use exploring further
+    alpha = float('-inf')
+    beta = float('inf')
     if terminal(board):
         return None
     chance = player(board)
     if chance == X:
-        _ = max_value(board)
+        _, move = maximize(board, alpha, beta)
     else:
-        _ = min_value(board)
-    return next_action
+        _, move = minimize(board, alpha, beta)
+    return move
+
+
+
