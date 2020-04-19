@@ -36,8 +36,10 @@ knowledge1 = And(
 # A says "We are the same kind."
 # B says "We are of different kinds."
 knowledge2 = And(
-    BiConditional(AKnight,BKnight)
-    BiConditional(BKnight,AKnave)
+    Biconditional(AKnight,Biconditional(AKnight,BKnight)),
+    Biconditional(BKnight,AKnave),
+    Implication(Not(AKnight),AKnave),
+    Implication(Not(BKnight),BKnave)
 )
 
 # Puzzle 3
@@ -46,7 +48,13 @@ knowledge2 = And(
 # B says "C is a knave."
 # C says "A is a knight."
 knowledge3 = And(
-    # TODO
+    Biconditional(AKnight,Not(And(AKnight,AKnave))),
+    Biconditional(BKnight,Biconditional(AKnight,AKnave)),
+    Biconditional(BKnight,Biconditional(CKnight,CKnave)),
+    Biconditional(CKnight,Biconditional(AKnight,AKnight)),
+    Implication(Not(AKnave),AKnight),
+    Implication(Not(BKnight),BKnave),
+    Implication(Not(CKnave),CKnight)
 )
 
 
