@@ -50,14 +50,39 @@ def crawl(directory):
 
 def transition_model(corpus, page, damping_factor):
     """
-    Return a probability distribution over which page to visit next,
-    given a current page.
+    Return a probability distribution over which page the random 
+    surfer would visit next, given a current page.
 
     With probability `damping_factor`, choose a link at random
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-    raise NotImplementedError
+    # Probability with which the random surfer will choose from each
+    # link from current page
+    if len(corpus[page]):
+        prob_currentpage = damping_factor/len(corpus[page])
+    else:
+        # if current page has zero links
+        prob_currentpage = 0
+
+    # Probability with which the random surfer will choose from all
+    # pages in the corpus : (1 - d)/N
+    prob_allpages = (1 - damping_factor)/len(corpus)
+
+    probdist_dict = {}
+
+    # Assign equal probability to all outgoing links from current page
+    for links in corpus[page]:
+        probdist_dict[links] = prob_currentpage + prob_allpages
+
+    # Note : If the current page has no links, consider it has links with
+    # every page and itself, thats same as giving equal prob to every page
+    # in the corpus
+    for pages in corpus:
+        if pages not in corpus[page]:
+            probdist_dict[pages] = prob_allpages
+
+    return probdist_dict
 
 
 def sample_pagerank(corpus, damping_factor, n):
@@ -69,7 +94,30 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    pagerank = {}
+
+    for i in range(n):
+        if not i:
+            # Pick any random page at start
+            page = random.choices(list(corpus.keys()))[0]
+        else:
+            """Calculate tranisition model probability of the current page
+            Meaning - calculate probability with which random surfer will
+            click on the link """
+            trans_prob = transition_model(corpus, page, damping_factor)
+            # Pick any one according to weight
+            page = random.choices(list(trans_prob.keys()),
+                                  weights=list(trans_prob.values()))[0]
+        # Keep track of no. of times each page visited
+        try:
+            pagerank[page] += 1
+        except KeyError:
+            pagerank[page] = 0
+
+
+    for key, val in pagerank.items():
+        pagerank[key] /= n
+    return pagerank
 
 
 def iterate_pagerank(corpus, damping_factor):
@@ -81,7 +129,6 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
 
 
 if __name__ == "__main__":
