@@ -63,7 +63,7 @@ def transition_model(corpus, page, damping_factor):
         prob_currentpage = damping_factor/len(corpus[page])
     else:
         # if current page has zero links
-        prob_currentpage = 0
+        prob_currentpage = damping_factor/len(corpus)
 
     # Probability with which the random surfer will choose from all
     # pages in the corpus : (1 - d)/N
@@ -114,7 +114,6 @@ def sample_pagerank(corpus, damping_factor, n):
         except KeyError:
             pagerank[page] = 0
 
-
     for key, val in pagerank.items():
         pagerank[key] /= n
     return pagerank
@@ -129,6 +128,28 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
+    pagerank = {}
+    N = len(corpus)
+    for key in corpus:
+        pagerank[key] = 1/N
+        if not corpus[key]:
+            for page in corpus:
+                corpus[key].add(page)
+    while(True):
+        accuracy = 0
+        for key in pagerank:
+            incoming_links = 0
+            # Check for incoming links from other pages
+            for page in corpus:
+                if key in corpus[page] and page != key:
+                    incoming_links += (pagerank[page])/len(corpus[page])
+            new_pagerank = ((1 - damping_factor)/N) + \
+                (damping_factor * incoming_links)
+            accuracy += abs(pagerank[key] - new_pagerank)
+            pagerank[key] = new_pagerank
+        if (accuracy/len(pagerank) <= 0.001):
+            break
+    return pagerank
 
 
 if __name__ == "__main__":
