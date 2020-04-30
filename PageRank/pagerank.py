@@ -101,7 +101,7 @@ def sample_pagerank(corpus, damping_factor, n):
             # Pick any random page at start
             page = random.choices(list(corpus.keys()))[0]
         else:
-            """Calculate tranisition model probability of the current page
+            """Calculate transition model probability of the current page
             Meaning - calculate probability with which random surfer will
             click on the link """
             trans_prob = transition_model(corpus, page, damping_factor)
@@ -132,23 +132,26 @@ def iterate_pagerank(corpus, damping_factor):
     N = len(corpus)
     for key in corpus:
         pagerank[key] = 1/N
+        # Consider pages with no links
         if not corpus[key]:
             for page in corpus:
                 corpus[key].add(page)
-    while(True):
+    flag = 0
+    while not flag:
+        flag = 1
         accuracy = 0
         for key in pagerank:
             incoming_links = 0
             # Check for incoming links from other pages
             for page in corpus:
-                if key in corpus[page] and page != key:
+                if key in corpus[page]:
                     incoming_links += (pagerank[page])/len(corpus[page])
             new_pagerank = ((1 - damping_factor)/N) + \
                 (damping_factor * incoming_links)
-            accuracy += abs(pagerank[key] - new_pagerank)
+            # Check accuracy
+            if abs(pagerank[key] - new_pagerank) > 0.001:
+                flag = 0
             pagerank[key] = new_pagerank
-        if (accuracy/len(pagerank) <= 0.001):
-            break
     return pagerank
 
 
