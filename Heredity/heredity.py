@@ -78,6 +78,7 @@ def main():
 
                 # Update probabilities with new joint probability
                 p = joint_probability(people, one_gene, two_genes, have_trait)
+                print(p)
                 update(probabilities, one_gene, two_genes, have_trait, p)
 
     # Ensure probabilities sum to 1
@@ -104,7 +105,7 @@ def load_data(filename):
     with open(filename) as f:
         reader = csv.DictReader(f)
         for row in reader:
-            name = row["name"]
+            name = row["name"]  
             data[name] = {
                 "name": name,
                 "mother": row["mother"] or None,
@@ -136,57 +137,109 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         * everyone in set `have_trait` has the trait, and
         * everyone not in set` have_trait` does not have the trait.
     """
-    print(people)
     join_prob = 1
+    zero_gene = set(
+        [x for x in people.keys() if x not in one_gene and x not in two_genes])
+    # print(zero_genes, one_gene, two_genes, have_trait)
     for name in people.keys():
+        if name in zero_gene:
+            if people[name]['mother']:
+                join_prob *= calculate(people, name,
+                                       zero_gene, one_gene, two_genes, 0)
+            else:
+                join_prob *= PROBS['gene'][0]
+            if name in have_trait:
+                join_prob *= PROBS['trait'][0][True]
+            else:
+                join_prob *= PROBS['trait'][0][False]
         # If person has one copy of gene
-        if name in one_gene:
+        elif name in one_gene:
             # Check if person does not have parents
             if not people[name]['mother']:
                 join_prob *= PROBS['gene'][1]
             # Check if person has trait
-            if people[name]['trait'] is not None:
-                join_prob *= PROBS['trait'][1][people[name]['trait']]
-            
+            if name in have_trait:
+                join_prob *= PROBS['trait'][1][True]
+            else:
+                join_prob *= PROBS['trait'][1][False]
+            if name not in have_trait and people[name]['mother']:
+                join_prob *= calculate(people, name,
+                                       zero_gene, one_gene, two_genes, 1)
+        elif name in two_genes:
+            if not people[name]['mother']:
+                join_prob *= PROBS['gene'][2]
+            # Check if person has trait
+            if name in have_trait:
+                join_prob *= PROBS['trait'][2][True]
+            else:
+                join_prob *= PROBS['trait'][2][False]
+            if name not in have_trait and people[name]['mother']:
+                join_prob *= calculate(people, name,
+                                       zero_gene, one_gene, two_genes, 2)
+    return join_prob
 
 
-#     zero_gene_no_trait = set([x for x in people.keys(
-#     ) if x not in one_gene and x not in two_genes and x not in have_trait])
-#     for name in zero_gene_no_trait:
-#         if people[name]['trait'] is not None:
-#             join_prob *= PROBS['gene'][0] * PROBS['trait'][0][False]
-#         else:
-#             join_prob *=
-    
-#     for p in people.keys():
-
-
-#     one_gene_prob = n_gene_prob(people, one_gene, have_trait, 1)
-#     two_gene_prob = n_gene_prob(people, two_genes, have_trait, 2)
-
-#     join_prob *= one_gene_prob * two_gene_prob
-
-
-# def find_(people, genes, have_trait, n):
-#     prob = 1
-#     # Calculate probability of people given that they have n gene
-#     # People with neither given trait nor given parents
-#     if not people[name]['mother'] and people[name]['trait'] == None:
-#         join_prob *= PROBS['gene'][n]
-#     # People who dont have parents given but have trait/ People with both trait and parents given
-#     elif not people[name]['mother'] or (people[name]['mother'] and people[name]['trait'] is not None):
-#         join_prob *= PROBS['gene'][0]
-#         if people[name]['trait']:
-#             join_prob *= PROBS['trait'][n][True]
-#         elif people[name]['trait'] == 0:
-#             join_prob *= PROBS['trait'][n][False]
-#     # Given parents but no trait
-#     else:
-#         father_trait = people[people[name]['father']]['trait']
-#         mother_trait = people[people[name]['mother']]['trait']
-#         if n==1: 
-#     return join_prob
-
+def calculate(people, name, zero_gene, one_gene, two_genes, in_gene):
+    join_prob = 1
+    father = people[name]['father']
+    mother = people[name]['mother']
+    if in_gene == 0 or (father in zero_gene and mother in zero_gene):
+        # Possible ways child can get 0 genes
+        join_prob = (1 - PROBS['mutation']) * (1 - PROBS['mutation'])
+    elif in_gene == 1:
+        # Possible ways child can get 1 genes
+        if father in one_gene:
+            # Father - One gene
+            if mother in zero_gene:
+                # Mother - Zero gene
+                join_prob = 0.5 * \
+                    (1 - PROBS['mutation']) + 0.5 * PROBS['mutation']
+            elif mother in one_gene:
+                # Mother - 1 gene
+                join_prob = 0.5 * 0.5 + 0.5 * 0.5
+            else:
+                # Mother - 2 genes
+                join_prob = 0.5 * \
+                    (1 - PROBS['mutation']) + 0.5 * PROBS['mutation']
+        if father in two_genes:
+            # Father - 2 gene
+            if mother in zero_gene:
+                # Mother - 0 gene
+                join_prob = (1 - PROBS['mutation']) * (1 - PROBS['mutation']
+                                                       ) + PROBS['mutation'] * PROBS['mutation']
+            elif mother in one_gene:
+                # Mother - 1 gene
+                join_prob = (1 - PROBS['mutation']) * \
+                    0.5 + (PROBS['mutation']) * 0.5
+            else:
+                # Mother - 2 genes
+                join_prob = (1 - PROBS['mutation']) * PROBS['mutation'] + \
+                    (1 - PROBS['mutation']) * PROBS['mutation']
+    else:
+        # Possible ways child can get 2 genes
+        if father in one_gene:
+            # Father - One gene
+            if mother in zero_gene:
+                # Mother - Zero gene
+                join_prob = 0.5 * PROBS['mutation']
+            elif mother in one_gene:
+                # Mother - 1 gene
+                join_prob = 0.5 * 0.5
+            else:
+                # Mother - 2 genes
+                join_prob = 0.5 * (1 - PROBS['mutation'])
+        if father in two_genes:
+            # Father - 2 gene
+            if mother in zero_gene:
+                # Mother - 0 gene
+                join_prob = (1 - PROBS['mutation']) * PROBS['mutation']
+            elif mother in one_gene:
+                # Mother - 1 gene
+                join_prob = (1 - PROBS['mutation']) * 0.5
+            else:
+                # Mother - 2 genes
+                join_prob = (1 - PROBS['mutation']) * (1 - PROBS['mutation'])
+    return join_prob
 
 
 def update(probabilities, one_gene, two_genes, have_trait, p):
@@ -196,14 +249,16 @@ def update(probabilities, one_gene, two_genes, have_trait, p):
     Which value for each distribution is updated depends on whether
     the person is in `have_gene` and `have_trait`, respectively.
     """
-    raise NotImplementedError
+    zero_gene = set(
+        [x for x in probabilities.keys() if x not in one_gene and x not in two_genes])
+
 
 
 def normalize(probabilities):
     """
     Update `probabilities` such that each probability distribution
     is normalized (i.e., sums to 1, with relative proportions the same).
-    """
+    """ 
     raise NotImplementedError
 
 
