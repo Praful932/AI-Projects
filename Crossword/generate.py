@@ -99,11 +99,11 @@ class CrosswordCreator():
         (Remove any values that are inconsistent with a variable's unary
          constraints; in this case, the length of the word.)
         """
-        for variable, possible_words in self.domains:
-            length = variable.length
-            for word in possible_words:
+        for key in self.domains:
+            length = key.length
+            for word in self.domains[key].copy():
                 if len(word) != length:
-                    self.domains[variable].remove(word)
+                    self.domains[key].remove(word)
 
     def revise(self, x, y):
         """
@@ -120,11 +120,10 @@ class CrosswordCreator():
             return False
         else:
             i, j = overlap
-            for xword in self.domains[x]:
-                for yword in self.domains[y]:
-                    if(xword[i] != yword[j]):
-                        modified = 1
-                        self.domains[x].remove(xword)
+            for xword in self.domains[x].copy():
+                if not any(xword[i] == yword[j] for yword in self.domains[y].copy()):
+                    modified = 1
+                    self.domains[x].remove(xword)
         if modified:
             return True
         return False
@@ -141,14 +140,14 @@ class CrosswordCreator():
         if arcs is None:
             arcs = list(self.crossword.overlaps.keys())
         while arcs:
-            node_pair = arcs[-1]
+            node_pair = arcs[0]
             arcs.remove(node_pair)
             x, y = node_pair
             # Make node x consistent with node y
             modified = self.revise(x, y)
             if modified:
                 # If there is no value for any x in y
-                if not self.domain[x]:
+                if not self.domains[x]:
                     return False
                 # Nodes which were consistent with x, now would not be
                 # Make them arc consistent
@@ -162,20 +161,23 @@ class CrosswordCreator():
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
-        return all(assignment[variable] != None for variable in assignment.keys())
+        # print(assignment)
+        if len(assignment) == len(self.domains):
+            return True
+        return False
 
     def consistent(self, assignment):
         """
         Return True if `assignment` is consistent (i.e., words fit in crossword
         puzzle without conflicting characters); return False otherise.
         """
+        if len(set(assignment.values())) != len(assignment.values()):
+            return False
         for variable in assignment.keys():
-            if len(set) != len(assignment[variable]):
-                return False
             length = variable.length
-            if any(len(word) != length for word in assignment[variable]):
+            if length != len(assignment[variable]):
                 return False
-            neighbours = self.crossword.neighbor(variable)
+            neighbours = self.crossword.neighbors(variable)
             for neighbour in neighbours:
                 modified = self.revise(variable, neighbour)
                 if modified:
@@ -190,23 +192,21 @@ class CrosswordCreator():
         that rules out the fewest values among the neighbors of `var`.
         """
         domain_dict = dict()
-        neighbours = self.crossword.neighbor(var)
+        neighbours = self.crossword.neighbors(var)
         xdomain = self.domains[var]
         for value in xdomain:
             count = 0
             for neighbour in neighbours:
                 # If it is not assigned
-                if assignment[neighbour] is None:
+                if neighbour not in assignment:
                     neighbour_domain = self.domains[neighbour]
                     if value in neighbour_domain:
                         count += 1
-                    domain_dict[value] = count
+            domain_dict[value] = count
 
-        domain_dict = dict(sorted(domain_dict.items(),key=operator.itemgetter(1)))
-
+        domain_dict = dict(
+            sorted(domain_dict.items(), key=operator.itemgetter(1)))
         return list(domain_dict.keys())
-
-
 
     def select_unassigned_variable(self, assignment):
         """
@@ -216,18 +216,42 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
-        raise NotImplementedError
+        node_dict = {}
+        for node in self.domains.keys():
+            if node not in assignment:
+                node_dict[node] = len(self.domains[node])
+        node_dict = dict(sorted(node_dict.items(), key=operator.itemgetter(1)))
+
+        val = list(node_dict.keys())
+        var = val[0]
+        if len(val)>1 and node_dict[val[0]] == node_dict[val[1]]:
+            var = val[0] if len(self.crossword.neighbors(val[0])) > len(
+                self.crossword.neighbors(val[1])) else val[1]
+        return var
 
     def backtrack(self, assignment):
         """
         Using Backtracking Search, take as input a partial assignment for the
         crossword and return a complete assignment if possible to do so.
-
         `assignment` is a mapping from variables (keys) to words (values).
-
         If no assignment is possible, return None.
         """
-        raise NotImplementedError
+        if self.assignment_complete(assignment):
+            return assignment
+        var = self.select_unassigned_variable(assignment)
+        # print(assignment,var,self.order_domain_values(var,assignment))
+        for value in self.order_domain_values(var, assignment):
+            new_assignment = assignment.copy()
+            new_assignment[var] = value
+            if self.consistent(new_assignment):
+                connected_nodes = [(var,n) for n in self.crossword.neighbors(var)]
+                inference = self.ac3(connected_nodes)
+                if inference:
+                    assignment[var] = value
+                    result = self.backtrack(assignment)
+                    if result is not None:
+                        return result
+        return None
 
 
 def main():
