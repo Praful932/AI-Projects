@@ -3,6 +3,7 @@ import numpy as np
 import os
 import sys
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 
@@ -22,7 +23,7 @@ def main():
 
     # Get image arrays and labels for all image files
     images, labels = load_data(sys.argv[1])
-
+    print(len(images), len(labels))
     # Split data into training and testing sets
     labels = tf.keras.utils.to_categorical(labels)
     x_train, x_test, y_train, y_test = train_test_split(
@@ -31,7 +32,6 @@ def main():
 
     # Get a compiled neural network
     model = get_model()
-
     # Fit model on training data
     model.fit(x_train, y_train, epochs=EPOCHS)
 
@@ -109,6 +109,24 @@ def get_model():
     )
 
     return model
+
+
+def visualize():
+    data_folder = 'gtsrb'
+    fig, ax = plt.subplots(figsize=(20, 20), nrows=5, ncols=8)
+    category = 0
+    for i in range(5):
+        for j in range(8):
+            image_path = os.path.join(os.path.join('gtsrb', str(category)))
+            image_no = np.random.randint(len(os.listdir(image_path)))
+            image_path = os.path.join(
+                image_path, os.listdir(image_path)[image_no])
+            img = cv2.imread(image_path)
+            # image = cv2.resize(img,(IMG_WIDTH, IMG_HEIGHT))
+            ax[i, j].axis("off")
+            ax[i, j].imshow(img)
+            ax[i, j].set_title(label_map[str(category)])
+            category += 1
 
 
 if __name__ == "__main__":
