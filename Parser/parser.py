@@ -15,11 +15,11 @@ V -> "smiled" | "tell" | "were"
 """
 
 NONTERMINALS = """
-S -> N V | N VP | S Conj S | NP VP | S Conj VP
-NP -> N P N | Det Adj N | Det N | N P S | N Adv | Det N Adv | Adj N PP | N PP
-VP -> V Det N | V Det NP | V P NP | V NP | V P N | Adv VP | V P NP | V Det AdjP
+S -> NP VP | S Conj S | NP VP | S Conj VP
+NP -> N P N | Det Adj N | Det N | N P S | Det N Adv | Adj N PP | N PP | N
+VP -> V Det N | V Det NP | V P NP | V NP | V P N | V Adv VP | V P NP | V Det VP | AdjP N PP | Adv VP | V Adv | V
 PP -> P N | P NP | P Det NP 
-AdjP -> Adj | Adj AdjP NP
+AdjP -> Adj | Adj AdjP
 """
 # N P NP
 # NP = Palm of my hand
@@ -56,6 +56,7 @@ def main():
         tree.pretty_print()
 
         print("Noun Phrase Chunks")
+        # print(tree,type(tree))
         for np in np_chunk(tree):
             print(" ".join(np.flatten()))
 
@@ -79,8 +80,23 @@ def np_chunk(tree):
     whose label is "NP" that does not itself contain any other
     noun phrases as subtrees.
     """
-    return []
+    npchunks = []
+    for subtree in tree.subtrees():
+        if subtree.label()=='NP':
+            if not NPC(subtree):
+                npchunks.append(subtree)            
+    return npchunks
 
+def NPC(tree):
+    for subtree in next(tree.subtrees()):
+        if isinstance(subtree,str):
+            return False
+        elif subtree.label() == 'NP':
+            return True
+        else:
+            NPC(subtree)
+    
+        
 
 if __name__ == "__main__":
     main()
