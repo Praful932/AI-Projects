@@ -81,21 +81,22 @@ def np_chunk(tree):
     noun phrases as subtrees.
     """
     npchunks = []
-    for subtree in tree.subtrees():
-        if subtree.label()=='NP':
-            if not NPC(subtree):
-                npchunks.append(subtree)            
+    for branch in tree.subtrees():
+        if branch.label()=='NP' and check(branch):
+            # print(branch)
+            npchunks.append(branch)
     return npchunks
 
-def NPC(tree):
-    for subtree in next(tree.subtrees()):
-        if isinstance(subtree,str):
+def check(branch):
+    for subbranch in branch:
+        print(subbranch, branch)
+        if isinstance(subbranch, str):
+            return
+        elif subbranch.label() == 'NP':
             return False
-        elif subtree.label() == 'NP':
-            return True
         else:
-            NPC(subtree)
-    
+            check(subbranch)
+    return True
         
 
 if __name__ == "__main__":
