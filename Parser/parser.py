@@ -82,22 +82,19 @@ def np_chunk(tree):
     """
     npchunks = []
     for branch in tree.subtrees():
-        if branch.label()=='NP' and check(branch):
-            # print(branch)
+        # If noun phrases then check all subtrees are not NP
+        if branch.label()=='NP' and all(check(b) for b in branch):
             npchunks.append(branch)
     return npchunks
-
-def check(branch):
-    for subbranch in branch:
-        print(subbranch, branch)
-        if isinstance(subbranch, str):
-            return
-        elif subbranch.label() == 'NP':
-            return False
-        else:
-            check(subbranch)
-    return True
         
+def check(branch):
+    if isinstance(branch,str):
+        return True
+    elif branch.label() == 'NP':
+        return False
+    else:
+        for b in branch:
+            return all(check(b) for b in branch)
 
 if __name__ == "__main__":
     main()
