@@ -57,7 +57,7 @@ def load_files(directory):
     for file_name in os.listdir(directory):
         file_path = os.path.join(directory, file_name)
         with open(file_path, encoding='utf-8') as f:
-            data[file_name] = " ".join(f.readlines())
+            data[file_name] = "".join(f.readlines())
 
     return data
 
@@ -111,7 +111,10 @@ def top_files(query, files, idfs, n):
     for file_name in files.keys():
             for word in query:
                 if word in file_name:
-                    topfiles[file_name] = idfs[word] * file_name.count(word)
+                    try:
+                        topfiles[file_name] += idfs[word] * file_name.count(word)
+                    except KeyError:
+                        topfiles[file_name] = idfs[word] * file_name.count(word)
 
     return nlargest(n, topfiles, key=topfiles.get)
         
@@ -125,8 +128,31 @@ def top_sentences(query, sentences, idfs, n):
     the query, ranked according to idf. If there are ties, preference should
     be given to sentences that have a higher query term density.
     """
-    
-    
+    topsentences = dict()
+    for s in sentences:
+        word_count = 0
+        topsentences[s] = dict()
+        for word in query:
+            if word in sentences[s]:
+                word_count += 1
+                try:
+                    topsentences[s]['idfs'] += idfs[word]
+                except KeyError:
+                    topsentences[s]['idfs'] = idfs[word]
+
+        # If sentence contains 0 matching words from query
+        if not word_count:
+            topsentences[s]['idfs'] = 0
+        topsentences[s]['qtd'] = word_count/len(sentences[s])
+
+    matches = nlargest(n, topsentences.items(), key = lambda x:(x[1]['idfs'],x[1]['qtd']))
+    final_sentences = []
+
+    for m in matches:
+        final_sentences.append(m[0])
+
+    return final_sentences
+
 
 
 if __name__ == "__main__":
